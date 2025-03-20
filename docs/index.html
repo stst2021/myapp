@@ -310,7 +310,11 @@ updatePagination();
             let dateCell = row.insertCell(0);
             let minutesCell = row.insertCell(1);
             dateCell.innerText = record.date;
-            minutesCell.innerText = record.minutes;
+
+            // 分を「〇時間〇分」形式に変換
+            let hours = Math.floor(record.minutes / 60);
+            let remainingMinutes = record.minutes % 60;
+            minutesCell.innerText = `${hours}時間${remainingMinutes}分`;
         }
         updatePagination();
     }
