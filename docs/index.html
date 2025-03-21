@@ -116,32 +116,32 @@
                 let closedDate = new Date(lastClosedTime * 1000).toISOString().split('T')[0];
                 let currentDate = new Date().toISOString().split('T')[0];
 
-                // 前回閉じた時間から今回開いた時間の間に日付が変わったかチェック
-                let closedDateObj = new Date(lastClosedTime * 1000);
-                let currentDateObj = new Date();
-                let midnightClosed = new Date(closedDateObj);
-                midnightClosed.setHours(23, 59, 59, 999);
+                // 前回閉じた時間から前回閉じた時間から今回開いた時間の間に日付が変わったかチェック
+let closedDateObj = new Date(lastClosedTime * 1000);
+let currentDateObj = new Date();
+let midnightClosed = new Date(closedDateObj);
+midnightClosed.setHours(23, 59, 59, 999);
 
-                if (midnightClosed.getTime() < currentDateObj.getTime()) {
-                    // 日付が変わった場合、前日の記録に追加
-                    let existingRecord = records.find(record => record.date === closedDate);
-                    if (existingRecord) {
-                        existingRecord.minutes += Math.floor(elapsed / 60);
-                    } else {
-                        records.push({ date: closedDate, minutes: Math.floor(elapsed / 60) });
-                    }
-                    localStorage.setItem('studyRecords', JSON.stringify(records));
-renderTable();
-} else if (!stopwatchRunning) {
-elapsedSeconds += elapsed;
-localStorage.setItem('elapsedSeconds', elapsedSeconds);
-}
-lastClosedTime = currentTime;
-localStorage.setItem('lastClosedTime', lastClosedTime);
-}
-updateDisplay();
-renderTable();
-updatePagination();
+            if (midnightClosed.getTime() < currentDateObj.getTime()) {
+                // 日付が変わった場合、前日の記録に追加
+                let existingRecord = records.find(record => record.date === closedDate);
+                if (existingRecord) {
+                    existingRecord.minutes += Math.floor(elapsed / 60);
+                } else {
+                    records.push({ date: closedDate, minutes: Math.floor(elapsed / 60) });
+                }
+                localStorage.setItem('studyRecords', JSON.stringify(records));
+                renderTable();
+            } else if (!stopwatchRunning) {
+                elapsedSeconds += elapsed;
+                localStorage.setItem('elapsedSeconds', elapsedSeconds);
+            }
+            lastClosedTime = currentTime;
+            localStorage.setItem('lastClosedTime', lastClosedTime);
+        }
+        updateDisplay();
+        renderTable();
+        updatePagination();
 
         // 最後に記録された日付と現在の日付を比較し、日付が変わっていれば記録
         let today = new Date().toISOString().split('T')[0];
@@ -347,124 +347,137 @@ updatePagination();
             currentPage--;
             localStorage.setItem('currentPage', currentPage);
             renderTable();
+}
         }
-    }
 
-    function nextPage() {
-        let totalPages = Math.ceil(records.length / recordsPerPage);
-        if (currentPage < totalPages) {
-            currentPage++;
+        function nextPage() {
+            let totalPages = Math.ceil(records.length / recordsPerPage);
+            if (currentPage < totalPages) {
+                currentPage++;
+                localStorage.setItem('currentPage', currentPage);
+                renderTable();
+            }
+        }
+
+        function lastPage() {
+            let totalPages = Math.ceil(records.length / recordsPerPage);
+            currentPage = totalPages;
             localStorage.setItem('currentPage', currentPage);
             renderTable();
         }
-    }
 
-    function lastPage() {
-        let totalPages = Math.ceil(records.length / recordsPerPage);
-        currentPage = totalPages;
-        localStorage.setItem('currentPage', currentPage);
-        renderTable();
-    }
-
-    // Excelファイルとしてダウンロード
-    function downloadExcel() {
-        let wb = XLSX.utils.book_new();
-        let ws_data = [["日付", "勉強時間"]];
-        records.forEach(record => {
-            ws_data.push([record.date, record.minutes]);
-        });
-        let ws = XLSX.utils.aoa_to_sheet(ws_data);
-        XLSX.utils.book_append_sheet(wb, ws, "勉強時間記録");
-        XLSX.writeFile(wb, "study_records.xlsx");
-    }
-
-    // 毎日の勉強時間を記録する関数
-    function recordDailyStudyTime() {
-        let today = new Date().toISOString().split('T')[0];
-        let dailyMinutes = Math.floor(elapsedSeconds / 60);
-        let existingRecord = records.find(record => record.date === today);
-
-        // すでにデータに追加しようとしている日のデータがなければ追加する
-        if (!existingRecord) {
-            records.push({ date: today, minutes: dailyMinutes });
-            localStorage.setItem('studyRecords', JSON.stringify(records));
-            renderTable();
-        } else {
-            existingRecord.minutes += dailyMinutes;
-            localStorage.setItem('studyRecords', JSON.stringify(records));
-            renderTable();
+        // Excelファイルとしてダウンロード
+        function downloadExcel() {
+            let wb = XLSX.utils.book_new();
+            let ws_data = [["日付", "勉強時間"]];
+            records.forEach(record => {
+                ws_data.push([record.date, record.minutes]);
+            });
+            let ws = XLSX.utils.aoa_to_sheet(ws_data);
+            XLSX.utils.book_append_sheet(wb, ws, "勉強時間記録");
+            XLSX.writeFile(wb, "study_records.xlsx");
         }
 
-        elapsedSeconds = 0;
-        localStorage.setItem('elapsedSeconds', elapsedSeconds);
-        updateDisplay();
-
-        // 最後に記録された日付を更新
-        localStorage.setItem('lastRecordedDate', today);
-    }
-
-    // 23:59になったら記録する関数
-    function checkMidnightAndRecord() {
-        let now = new Date();
-        if (now.getHours() === 23 && now.getMinutes() === 59) {
+        // 毎日の勉強時間を記録する関数
+        function recordDailyStudyTime() {
             let today = new Date().toISOString().split('T')[0];
-            if (lastRecordedDate !== today) {
-                recordDailyStudyTime();
+            let dailyMinutes = Math.floor(elapsedSeconds / 60);
+            let existingRecord = records.find(record => record.date === today);
+
+            // 前日の記録を取得
+            let yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            let yesterdayStr = yesterday.toISOString().split('T')[0];
+            let yesterdayRecord = records.find(record => record.date === yesterdayStr);
+            let yesterdayMinutes = yesterdayRecord ? yesterdayRecord.minutes : 0;
+
+            // 当日の勉強時間を計算（メインタイマーの累計時間 - 前日の記録）
+            let todayMinutes = dailyMinutes - yesterdayMinutes;
+            if (todayMinutes < 0) {
+                todayMinutes = dailyMinutes; // 前日の記録がない場合は、メインタイマーの累計時間をそのまま使用
             }
-        }
-    }
 
-    // ブラウザを閉じる前にタイムスタンプを保存
-    window.addEventListener('beforeunload', () => {
-        localStorage.setItem('lastClosedTime', Math.floor(Date.now() / 1000));
-    });
-
-    function countdown(targetDate, elementId, todayId, titleId) {
-        var currentDate = new Date();
-        var timeDifference = targetDate.getTime() - currentDate.getTime();
-
-        if (timeDifference > 0) {
-            var daysRemaining = Math.floor(timeDifference / (1000 * 60 * 60 * 24));
-            var hoursRemaining = Math.floor((timeDifference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-            var minutesRemaining = Math.floor((timeDifference % (1000 * 60 * 60)) / (1000 * 60));
-            var secondsRemaining = Math.floor((timeDifference % (1000 * 60)) / 1000);
-
-            document.getElementById(elementId).innerHTML = "<span class='number'>" + daysRemaining + "</span>日 " +
-                "<span class='number'>" + hoursRemaining + "</span>時間 " +
-                "<span class='number'>" + minutesRemaining + "</span>分 " +
-                "<span class='number'>" + secondsRemaining + "</span>秒";
-        } else {
-            var daysPassed = Math.floor((currentDate.getTime() - targetDate.getTime()) / (1000 * 60 * 60 * 24));
-            var hoursPassed = Math.floor(((currentDate.getTime() - targetDate.getTime()) % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-            var minutesPassed = Math.floor(((currentDate.getTime() - targetDate.getTime()) % (1000 * 60 * 60)) / (1000 * 60));
-            var secondsPassed = Math.floor(((currentDate.getTime() - targetDate.getTime()) % (1000 * 60)) / 1000);
-            document.getElementById(elementId).style.display = "none";
-            document.getElementById(todayId).style.display = "block";
-
-            if (daysPassed === 0 && hoursPassed === 0 && minutesPassed === 0) {
-                document.getElementById(todayId).innerText = "0日...";
+            // すでにデータに追加しようとしている日のデータがなければ追加する
+            if (!existingRecord) {
+                records.push({ date: today, minutes: todayMinutes });
+                localStorage.setItem('studyRecords', JSON.stringify(records));
+                renderTable();
             } else {
-                document.getElementById(titleId).innerText = document.getElementById(titleId).innerText.replace("まで", "から");
-                document.getElementById(todayId).innerText = daysPassed + "日 " + hoursPassed + "時間 " + minutesPassed + "分 " + secondsPassed + "秒 経ちました";
+                existingRecord.minutes += todayMinutes;
+                localStorage.setItem('studyRecords', JSON.stringify(records));
+                renderTable();
+            }
+
+            elapsedSeconds = 0;
+            localStorage.setItem('elapsedSeconds', elapsedSeconds);
+            updateDisplay();
+
+            // 最後に記録された日付を更新
+            localStorage.setItem('lastRecordedDate', today);
+        }
+
+        // 23:59になったら記録する関数
+        function checkMidnightAndRecord() {
+            let now = new Date();
+            if (now.getHours() === 23 && now.getMinutes() === 59) {
+                let today = new Date().toISOString().split('T')[0];
+                if (lastRecordedDate !== today) {
+                    recordDailyStudyTime();
+                }
             }
         }
-    }
 
-    document.addEventListener("DOMContentLoaded", function () {
-        var highschoolExamDate = new Date(2025, 1, 26, 0, 0, 0);
-        var commonTestDate = new Date(2028, 0, 15, 0, 0, 0);
+        // ブラウザを閉じる前にタイムスタンプを保存
+        window.addEventListener('beforeunload', () => {
+            localStorage.setItem('lastClosedTime', Math.floor(Date.now() / 1000));
+        });
 
-        countdown(highschoolExamDate, "countdown", "today", "title1");
-        countdown(commonTestDate, "countdown2", "today2", "title2");
+        function countdown(targetDate, elementId, todayId, titleId) {
+            var currentDate = new Date();
+            var timeDifference = targetDate.getTime() - currentDate.getTime();
 
-        setInterval(function() {
+            if (timeDifference > 0) {
+                var daysRemaining = Math.floor(timeDifference / (1000 * 60 * 60 * 24));
+                var hoursRemaining = Math.floor((timeDifference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                var minutesRemaining = Math.floor((timeDifference % (1000 * 60 * 60)) / (1000 * 60));
+                var secondsRemaining = Math.floor((timeDifference % (1000 * 60)) / 1000);
+
+                document.getElementById(elementId).innerHTML = "<span class='number'>" + daysRemaining + "</span>日 " +
+                    "<span class='number'>" + hoursRemaining + "</span>時間 " +
+                    "<span class='number'>" + minutesRemaining + "</span>分 " +
+                    "<span class='number'>" + secondsRemaining + "</span>秒";
+            } else {
+                var daysPassed = Math.floor((currentDate.getTime() - targetDate.getTime()) / (1000 * 60 * 60 * 24));
+                var hoursPassed = Math.floor(((currentDate.getTime() - targetDate.getTime()) % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                var minutesPassed = Math.floor(((currentDate.getTime() - targetDate.getTime()) % (1000 * 60 * 60)) / (1000 * 60));
+                var secondsPassed = Math.floor(((currentDate.getTime() - targetDate.getTime()) % (1000 * 60)) / 1000);
+                document.getElementById(elementId).style.display = "none";
+                document.getElementById(todayId).style.display = "block";
+
+                if (daysPassed === 0 && hoursPassed === 0 && minutesPassed === 0) {
+                    document.getElementById(todayId).innerText = "0日...";
+                } else {
+                    document.getElementById(titleId).innerText = document.getElementById(titleId).innerText.replace("まで", "から");
+                    document.getElementById(todayId).innerText = daysPassed + "日 " + hoursPassed + "時間 " + minutesPassed + "分 " + secondsPassed + "秒 経ちました";
+                }
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", function () {
+            var highschoolExamDate = new Date(2025, 1, 26, 0, 0, 0);
+            var commonTestDate = new Date(2028, 0, 15, 0, 0, 0);
+
             countdown(highschoolExamDate, "countdown", "today", "title1");
             countdown(commonTestDate, "countdown2", "today2", "title2");
-        }, 1000);
-    });
 
-    // 1秒ごとに23:59になったかチェック
-    setInterval(checkMidnightAndRecord, 1000);
-</script>
+            setInterval(function() {
+                countdown(highschoolExamDate, "countdown", "today", "title1");
+                countdown(commonTestDate, "countdown2", "today2", "title2");
+            }, 1000);
+        });
+
+        // 1秒ごとに23:59になったかチェック
+        setInterval(checkMidnightAndRecord, 1000);
+    </script>
 </body>
 </html>
