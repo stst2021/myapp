@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>勉強時間記録アプリ</title>
+    <style>
+        body {
+            text-align: center;
+            font-family: Arial, sans-serif;
+        }
+
+        h2#time {
+            font-size: 150px;
+            font-weight: bold;
+            width: 100%;
+            display: inline-block;
+        }
+
+        .controls,
+        .record-controls {
+            margin-top: 20px;
+        }
+
+        button {
+            font-size: 16px;
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+        }
+
+        .btn-primary {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        .btn-warning {
+            background-color: #f39c12;
+            color: white;
+        }
+
+        .btn-danger {
+            background-color: #e74c3c;
+            color: white;
+        }
+
+        .btn-secondary {
+            background-color: #95a5a6;
+            color: white;
+        }
+
+        table {
+            margin: 20px auto;
+            border-collapse: collapse;
+            width: 80%;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .pagination button {
+            margin: 0 5px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .menu {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            cursor: pointer;
+            font-size: 24px;
+        }
+
+        .menu-content {
+            display: none;
+            position: fixed;
+            top: 40px;
+            left: 10px;
+            background: white;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        .menu-content a {
+            display: block;
+            padding: 5px;
+            cursor: pointer;
+            text-decoration: none;
+            color: black;
+        }
+
+        #countdown,
+        #countdown2 {
+            font-size: 25px;
+            color: black;
+            text-align: center;
+        }
+
+        .number {
+            font-size: 80px;
+            color: red;
+            font-family: "Dela Gothic One", sans-serif;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&display=swap" rel="stylesheet">
+    <script src="https://kit.fontawesome.com/d50a2a1997.js" crossorigin="anonymous"></script>
+</head>
+
+<body>
+    <div class="menu" onclick="toggleMenu()">☰</div>
+    <div class="menu-content" id="menu-content">
+        <a onclick="showTimer()">メインタイマー</a>
+        <a onclick="showTable()">勉強時間データ</a>
+        <a onclick="showCountdown()">カウントダウン</a>
+    </div>
+    <div id="timer-section">
+        <h1>勉強時間記録アプリ</h1>
+        <h2 id="time">00:00:00</h2>
+        <div class="controls">
+            <button class="btn-primary" onclick="startStopwatch()"><i class="fa-solid fa-play"></i>　開始</button>
+            <button class="btn-secondary" onclick="pauseStopwatch()"><i class="fa-solid fa-pause"></i>　一時停止</button>
+            <button class="btn-warning" onclick="showSubtractMenu()">勉強時間を減らす</button>
+            <button class="btn-success" onclick="showAddMenu()">勉強時間を増やす</button>
+        </div>
+    </div>
+    <div id="table-section" class="hidden">
+        <table id="record-table">
+            <thead>
+                <tr>
+                    <th>日付</th>
+                    <th>勉強時間</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+        <div class="pagination">
+            <button onclick="firstPage()">≪</button>
+            <button onclick="prevPage()">＜</button>
+            <span id="page-info">ページ 1</span>
+            <button onclick="nextPage()">＞</button>
+            <button onclick="lastPage()">≫</button>
+        </div>
+        <button class="btn-primary" onclick="downloadExcel()">Excelファイルとしてダウンロード</button>
+    </div>
+    <div id="countdown-section" class="hidden">
+        <h2 id="title1" style="font-size: 280%; text-align: left; margin-left: 20px;">2024年度埼玉県公立高校入試まで</h2>
+        <p id="countdown"></p>
+        <p id="today" style="display: none; text-align: center;"></p>
+        <h3 align="center" style="color:chocolate">
+            ※筆記試験は2025年2月26日、実技検査と面接は2月27日、合格発表は3月6日。そのため、今回は筆記試験までのカウントダウンとしています。</h3>
+        <h2 id="title2" style="font-size: 280%; text-align: left; margin-left: 20px;">2027年度共通テストまで</h2>
+        <p id="countdown2"></p>
+        <p id="today2" style="display: none; text-align: center;"></p>
+        <h3 align="center" style="color:chocolate">※いまだ暫定ですが、まぁ2028年1月15日でしょう</h3>
+    </div>
+    <div id="subtract-menu" class="hidden">
+        <h3>勉強時間を減らす</h3>
+        <label for="date-select">日付を選択：</label>
+        <select id="date-select" onchange="enableMinutesInput()">
+            <option value="">選択してください</option>
+        </select>
+        <br><br>
+        <label for="subtract-minutes">減らす時間（分）：</label>
+        <input type="number" id="subtract-minutes" disabled min="1">
+        <br><br>
+        <button class="btn-secondary" onclick="closeSubtractMenu()">閉じる</button>
+        <button class="btn-primary" onclick="confirmSubtract()">確定</button>
+    </div>
+    <div id="add-menu" class="hidden">
+        <h3>勉強時間を増やす</h3>
+        <label for="add-date-select">日付を選択：</label>
+        <input type="date" id="add-date-input">
+        <br><br>
+        <label for="add-minutes">増やす時間（分）：</label>
+        <input type="number" id="add-minutes" disabled min="1">
+        <br><br>
+        <button class="btn-secondary" onclick="closeAddMenu()">閉じる</button>
+        <button class="btn-primary" onclick="confirmAdd()">確定</button>
+    </div>
+    <script>
+        let stopwatchInterval;
+        let elapsedSeconds = parseInt(localStorage.getItem('elapsedSeconds')) || 0;
+        let stopwatchRunning = false;
+        let records = JSON.parse(localStorage.getItem('studyRecords')) || [];
+        let currentPage = parseInt(localStorage.getItem('currentPage')) || 1;
+        const recordsPerPage = 5;
+        let lastClosedTime = parseInt(localStorage.getItem('lastClosedTime')) || 0;
+        let lastRecordedDate = localStorage.getItem('lastRecordedDate'); // 最後に記録された日付
+
+        // ページ読み込み時の処理
+        window.onload = function () {
+            // 閉じた時間からの経過時間を補完
+            if (lastClosedTime) {
+                let currentTime = Math.floor(Date.now() / 1000);
+                let elapsed = Math.max(0, currentTime - lastClosedTime);
+                let closedDate = new Date(lastClosedTime * 1000).toISOString().split('T')[0];
+                let currentDate = new Date().toISOString().split('T')[0];
+
+                // 前回閉じた時間から前回閉じた時間から今回開いた時間の間に日付が変わったかチェック
+                let closedDateObj = new Date(lastClosedTime * 1000);
+                let currentDateObj = new Date();
+                let midnightClosed = new Date(closedDateObj);
+                midnightClosed.setHours(23, 59, 59, 999);
+
+                if (midnightClosed.getTime() < currentDateObj.getTime()) {
+                    // 日付が変わった場合、前日の記録に追加
+                    let existingRecord = records.find(record => record.date === closedDate);
+                    if (existingRecord) {
+                        existingRecord.minutes += Math.floor(elapsed / 60);
+                    } else {
+                        records.push({ date: closedDate, minutes: Math.floor(elapsed / 60) });
+                    }
+                    localStorage.setItem('studyRecords', JSON.stringify(records));
+                    renderTable();
+                } else if (!stopwatchRunning) {
+                    elapsedSeconds += elapsed;
+                    localStorage.setItem('elapsedSeconds', elapsedSeconds);
+                }
+                lastClosedTime = currentTime;
+                localStorage.setItem('lastClosedTime', lastClosedTime);
+            }
+            updateDisplay();
+            renderTable();
+            updatePagination();
+
+            // 最後に記録された日付と現在の日付を比較し、日付が変わっていれば記録
+            let today = new Date().toISOString().split('T')[0];
+            if (lastRecordedDate !== today) {
+                recordDailyStudyTime();
+            }
+
+            // 23:59になったら記録
+            checkMidnightAndRecord();
+        };
+
+        // メニュー表示と閉じる処理
+        function toggleMenu() {
+            let menu = document.getElementById("menu-content");
+            if (menu.style.display === "block" || menu.style.display === "") {
+                menu.style.display = "none";
+            } else {
+                menu.style.display = "block";
+            }
+        }
+
+        function showTimer() {
+            document.getElementById("timer-section").classList.remove("hidden");
+            document.getElementById("table-section").classList.add("hidden");
+            document.getElementById("countdown-section").classList.add("hidden");
+        }
+
+        function showTable() {
+            pauseStopwatch();
+            document.getElementById("timer-section").classList.add("hidden");
+            document.getElementById("table-section").classList.remove("hidden");
+            document.getElementById("countdown-section").classList.add("hidden");
+            closeAddMenu();
+            closeSubtractMenu();
+        }
+
+        function showCountdown() {
+            document.getElementById("timer-section").classList.add("hidden");
+            document.getElementById("table-section").classList.add("hidden");
+            document.getElementById("countdown-section").classList.remove("hidden");
+            closeAddMenu();
+            closeSubtractMenu();
+        }
+
+        function startStopwatch() {
+            if (!stopwatchRunning) {
+                stopwatchRunning = true;
+                stopwatchInterval = setInterval(() => {
+                    elapsedSeconds++;
+                    localStorage.setItem('elapsedSeconds', elapsedSeconds);
+                    updateDisplay();
+                }, 1000);
+            }
+        }
+
+        function pauseStopwatch() {
+            clearInterval(stopwatchInterval);
+            stopwatchRunning = false;
+        }
+
+        function updateDisplay() {
+            let hours = String(Math.floor(elapsedSeconds / 3600)).padStart(2, "0");
+            let minutes = String(Math.floor((elapsedSeconds % 3600) / 60)).padStart(2, "0");
+            let seconds = String(elapsedSeconds % 60).padStart(2, "0");
+            document.getElementById("time").innerText = `${hours}:${minutes}:${seconds}`; // 修正箇所
+        }
+
+        // 時間を増やす処理
+        // 勉強時間を増やす処理
+        function showAddMenu() {
+            document.getElementById("add-menu").classList.remove("hidden");
+            enableAddMinutesInput();
+        }
+        function closeAddMenu() {
+            document.getElementById("add-menu").classList.add("hidden");
+        }
+        // 日付が選択されたら増やせる時間を設定
+        function enableAddMinutesInput() {
+            let input = document.getElementById("add-minutes");
+            let dateInput = document.getElementById("add-date-input");
+
+            if (dateInput && dateInput.value !== "") {
+                input.disabled = false;
+                input.value = "";
+                input.placeholder = "追加する時間を入力してください"; // ここを修正
+            } else {
+                input.disabled = true;
+                input.value = "";
+                input.placeholder = "日付を選択してください";
+            }
+        }
+        function confirmAdd() {
+            let selectedDate = document.getElementById("add-date-input").value;
+            let addMinutes = parseInt(document.getElementById("add-minutes").value);
+
+            if (!selectedDate) {
+                alert("日付を選択してください。");
+                return;
+            }
+            if (isNaN(addMinutes) || addMinutes <= 0) {
+                alert("正しい時間を入力してください。");
+                return;
+            }
+
+            // 入力された日付が records 配列に存在するか確認
+            let existingRecord = records.find(record => record.date === selectedDate);
+
+            if (existingRecord) {
+                // 既存のデータが存在する場合、minutes を加算
+                existingRecord.minutes += addMinutes;
+            } else {
+                // 既存のデータが存在しない場合、新しいデータオブジェクトを作成して追加
+                records.push({ date: selectedDate, minutes: addMinutes });
+            }
+            // records 配列を日付の新しい順にソート
+            records.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            localStorage.setItem('studyRecords', JSON.stringify(records));
+            renderTable();
+
+            // メインタイマーの値を更新
+            elapsedSeconds += addMinutes * 60;
+            localStorage.setItem('elapsedSeconds', elapsedSeconds);
+            updateDisplay();
+        }
+        // add-date-input 要素に change イベントリスナーを追加
+        let addDateInput = document.getElementById("add-date-input");
+        if (addDateInput) {
+            addDateInput.addEventListener("change", enableAddMinutesInput);
+        }
+
+
+        // 勉強時間を減らす処理
+        function showSubtractMenu() {
+            updateDateOptions();
+            document.getElementById("subtract-menu").classList.remove("hidden");
+        }
+
+        function closeSubtractMenu() {
+            document.getElementById("subtract-menu").classList.add("hidden");
+        }
+
+        // プルダウンメニューに日付のオプションを追加
+        function updateDateOptions() {
+            let select = document.getElementById("date-select");
+            select.innerHTML = '<option value="">選択してください</option>';
+
+            records.forEach(record => {
+                let option = document.createElement("option");
+                option.value = record.date;
+                option.innerText = record.date;
+                select.appendChild(option);
+            });
+        }
+
+        // 日付が選択されたら減らせる時間を設定
+        function enableMinutesInput() {
+            let select = document.getElementById("date-select");
+            let input = document.getElementById("subtract-minutes");
+
+            if (select.value === "") {
+                input.disabled = true;
+                input.value = "";
+                input.placeholder = "日付を選択してください";
+                return;
+            }
+
+            let maxMinutes = getRecordedMinutes(select.value);
+            input.disabled = false;
+            input.value = "";
+            input.placeholder = `最大 ${maxMinutes} 分まで`;
+            input.setAttribute("max", maxMinutes);
+        }
+
+        // 時間を減らす処理 (修正)
+        function confirmSubtract() {
+            let selectedDate = document.getElementById("date-select").value;
+            let subtractMinutes = parseInt(document.getElementById("subtract-minutes").value);
+
+            if (!selectedDate) {
+                alert("日付を選択してください。");
+                return;
+            }
+            if (isNaN(subtractMinutes) || subtractMinutes <= 0) {
+                alert("正しい時間を入力してください。");
+                return;
+            }
+
+            let maxMinutes = getRecordedMinutes(selectedDate);
+            if (subtractMinutes > maxMinutes) {
+                alert(`減らす時間が大きすぎます。最大 ${maxMinutes} 分まで入力できます。`);
+                return;
+            }
+
+            // メインタイマーの時間を減らす (修正)
+            let subtractSeconds = subtractMinutes * 60;
+            if (elapsedSeconds >= subtractSeconds) {
+                elapsedSeconds -= subtractSeconds;
+                localStorage.setItem('elapsedSeconds', elapsedSeconds);
+                updateDisplay();
+            } else {
+                alert("メインタイマーの時間が不足しています。");
+                return;
+            }
+
+            records = records.map(record => {
+                if (record.date === selectedDate) {
+                    record.minutes -= subtractMinutes;
+                    if (record.minutes < 0) record.minutes = 0;
+                }
+                return record;
+            });
+            localStorage.setItem('studyRecords', JSON.stringify(records));
+            renderTable();
+        }
+
+        // 選択した日付の勉強時間（分）を取得する関数
+        function getRecordedMinutes(selectedDate) {
+            let record = records.find(r => r.date === selectedDate);
+            return record ? record.minutes : 0;
+        }
+
+        // 記録テーブルのレンダリング
+        function renderTable() {
+            let tableBody = document.querySelector("#record-table tbody");
+            tableBody.innerHTML = "";
+
+            let startIndex = (currentPage - 1) * recordsPerPage;
+            let endIndex = Math.min(startIndex + recordsPerPage, records.length);
+
+            for (let i = startIndex; i < endIndex; i++) {
+                let record = records[i];
+                let row = tableBody.insertRow();
+                let dateCell = row.insertCell(0);
+                let minutesCell = row.insertCell(1);
+                dateCell.innerText = record.date;
+
+                // 分を「〇時間〇分」形式に変換
+                let hours = Math.floor(record.minutes / 60);
+                let remainingMinutes = record.minutes % 60;
+                minutesCell.innerText = `${hours}時間${remainingMinutes}分`;
+            }
+            updatePagination();
+        }
+
+        // ページネーションの更新
+        function updatePagination() {
+            let totalPages = Math.ceil(records.length / recordsPerPage);
+            document.getElementById("page-info").innerText = `ページ ${currentPage} / ${totalPages}`;
+            document.querySelector(".pagination button:first-child").disabled = currentPage === 1;
+            document.querySelector(".pagination button:nth-child(2)").disabled = currentPage === 1;
+            document.querySelector(".pagination button:nth-child(4)").disabled = currentPage === totalPages;
+            document.querySelector(".pagination button:last-child").disabled = currentPage === totalPages;
+
+            // 11日以上の記録がある場合のみページネーションを表示
+            if (records.length > recordsPerPage) {
+                document.querySelector(".pagination").style.display = "flex";
+            } else {
+                document.querySelector(".pagination").style.display = "none";
+            }
+        }
+
+        function firstPage() {
+            currentPage = 1;
+            localStorage.setItem('currentPage', currentPage);
+            renderTable();
+        }
+
+        function prevPage() {
+            if (currentPage > 1) {
+                currentPage--;
+                localStorage.setItem('currentPage', currentPage);
+                renderTable();
+            }
+        }
+
+        function nextPage() {
+            let totalPages = Math.ceil(records.length / recordsPerPage);
+            if (currentPage < totalPages) {
+                currentPage++;
+                localStorage.setItem('currentPage', currentPage);
+                renderTable();
+            }
+        }
+
+        function lastPage() {
+            let totalPages = Math.ceil(records.length / recordsPerPage);
+            currentPage = totalPages;
+            localStorage.setItem('currentPage', currentPage);
+            renderTable();
+        }
+
+        // Excelファイルとしてダウンロード
+        function downloadExcel() {
+            let wb = XLSX.utils.book_new();
+            let ws_data = [["日付", "勉強時間"]];
+            records.forEach(record => {
+                ws_data.push([record.date, record.minutes]);
+            });
+            let ws = XLSX.utils.aoa_to_sheet(ws_data);
+            XLSX.utils.book_append_sheet(wb, ws, "勉強時間記録");
+            XLSX.writeFile(wb, "study_records.xlsx");
+        }
+
+        // 毎日の勉強時間を記録する関数
+        function recordDailyStudyTime() {
+            let today = new Date().toISOString().split('T')[0];
+            let dailyMinutes = Math.floor(elapsedSeconds / 60);
+            let existingRecord = records.find(record => record.date === today);
+
+            // 前日までの合計時間を計算
+            let totalPreviousMinutes = 0;
+            records.forEach(record => {
+                if (record.date < today) {
+                    totalPreviousMinutes += record.minutes;
+                }
+            });
+
+            // 当日の勉強時間を計算
+            let todayMinutes = dailyMinutes - totalPreviousMinutes;
+            if (todayMinutes < 0) {
+                todayMinutes = dailyMinutes; // 前日までの記録がない場合は、メインタイマーの累計時間をそのまま使用
+            }
+
+            // すでにデータに追加しようとしている日のデータがなければ追加する
+            if (!existingRecord) {
+                records.push({ date: today, minutes: todayMinutes });
+                localStorage.setItem('studyRecords', JSON.stringify(records));
+                renderTable();
+            } else {
+                existingRecord.minutes += todayMinutes;
+                localStorage.setItem('studyRecords', JSON.stringify(records));
+                renderTable();
+            }
+
+            // 最後に記録された日付を更新
+            localStorage.setItem('lastRecordedDate', today);
+        }
+
+        // 23:59になったら記録する関数
+        function checkMidnightAndRecord() {
+            let now = new Date();
+            if (now.getHours() === 23 && now.getMinutes() === 59) {
+                let today = new Date().toISOString().split('T')[0];
+                if (lastRecordedDate !== today) {
+                    recordDailyStudyTime();
+                }
+            }
+        }
+
+        // ブラウザを閉じる前にタイムスタンプを保存
+        window.addEventListener('beforeunload', () => {
+            localStorage.setItem('lastClosedTime', Math.floor(Date.now() / 1000));
+        });
+
+        function countdown(targetDate, elementId, todayId, titleId) {
+            var currentDate = new Date();
+            var timeDifference = targetDate.getTime() - currentDate.getTime();
+
+            if (timeDifference > 0) {
+                var daysRemaining = Math.floor(timeDifference / (1000 * 60 * 60 * 24));
+                var hoursRemaining = Math.floor((timeDifference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                var minutesRemaining = Math.floor((timeDifference % (1000 * 60 * 60)) / (1000 * 60));
+                var secondsRemaining = Math.floor((timeDifference % (1000 * 60)) / 1000);
+
+                document.getElementById(elementId).innerHTML = "<span class='number'>" + daysRemaining + "</span>日 " +
+                    "<span class='number'>" + hoursRemaining + "</span>時間 " +
+                    "<span class='number'>" + minutesRemaining + "</span>分 " +
+                    "<span class='number'>" + secondsRemaining + "</span>秒";
+            } else {
+                var daysPassed = Math.floor((currentDate.getTime() - targetDate.getTime()) / (1000 * 60 * 60 * 24));
+                var hoursPassed = Math.floor(((currentDate.getTime() - targetDate.getTime()) % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                var minutesPassed = Math.floor(((currentDate.getTime() - targetDate.getTime()) % (1000 * 60 * 60)) / (1000 * 60));
+                var secondsPassed = Math.floor(((currentDate.getTime() - targetDate.getTime()) % (1000 * 60)) / 1000);
+                document.getElementById(elementId).style.display = "none";
+                document.getElementById(todayId).style.display = "block";
+
+                if (daysPassed === 0 && hoursPassed === 0 && minutesPassed === 0) {
+                    document.getElementById(todayId).innerText = "0日...";
+                } else {
+                    document.getElementById(titleId).innerText = document.getElementById(titleId).innerText.replace("まで", "から");
+                    document.getElementById(todayId).innerText = daysPassed + "日 " + hoursPassed + "時間 " + minutesPassed + "分 " + secondsPassed + "秒 経ちました";
+                }
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", function () {
+            var highschoolExamDate = new Date(2025, 1, 26, 0, 0, 0);
+            var commonTestDate = new Date(2028, 0, 15, 0, 0, 0);
+
+            countdown(highschoolExamDate, "countdown", "today", "title1");
+            countdown(commonTestDate, "countdown2", "today2", "title2");
+
+            setInterval(function () {
+                countdown(highschoolExamDate, "countdown", "today", "title1");
+                countdown(commonTestDate, "countdown2", "today2", "title2");
+            }, 1000);
+        });
+
+        // 1秒ごとに23:59になったかチェック
+        setInterval(checkMidnightAndRecord, 1000);
+    </script>
+</body>
+
+</html>
