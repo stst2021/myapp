@@ -164,6 +164,7 @@
             <button onclick="lastPage()">≫</button>
         </div>
         <button class="btn-primary" onclick="downloadExcel()">Excelファイルとしてダウンロード</button>
+        <button class="btn-primary" onclick="sortByDate()">日付でソート（新しい順）</button>
     </div>
     <div id="countdown-section" class="hidden">
         <h2 id="title1" style="font-size: 280%; text-align: left; margin-left: 20px;">2024年度埼玉県公立高校入試まで</h2>
@@ -466,6 +467,13 @@
             let record = records.find(r => r.date === selectedDate);
             return record ? record.minutes : 0;
         }
+        // 日付でソートする関数
+function sortByDate() {
+    records.sort((a, b) => new Date(b.date) - new Date(a.date));
+    currentPage = 1; // ソート後にページをリセット
+    localStorage.setItem('currentPage', currentPage);
+    renderTable();
+}
 
         // 記録テーブルのレンダリング
         function renderTable() {
@@ -579,6 +587,8 @@
                 localStorage.setItem('studyRecords', JSON.stringify(records));
                 renderTable();
             }
+                // records 配列を日付の新しい順にソート
+    records.sort((a, b) => new Date(b.date) - new Date(a.date));
 
             // 最後に記録された日付を更新
             localStorage.setItem('lastRecordedDate', today);
