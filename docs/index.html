@@ -597,7 +597,7 @@ function sortByDate() {
         // 23:59になったら記録する関数
         function checkMidnightAndRecord() {
             let now = new Date();
-            if (now.getHours() === 23 && now.getMinutes() === 59) {
+            if (now.getHours() === 23 && now.getMinutes() === 59 && now.getSeconds() === 59) {
                 let today = new Date().toISOString().split('T')[0];
                 if (lastRecordedDate !== today) {
                     recordDailyStudyTime();
